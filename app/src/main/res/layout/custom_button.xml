@@ -7,14 +7,13 @@
     <TextView
         android:id="@+id/buttonTitle"
         android:textColor="@color/black"
-        android:fontFamily="@font/roboto_medium"
+        android:fontFamily="@font/productsans_regular"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:ellipsize="end"
         android:maxWidth="220dp"
         android:maxLines="1"
-        android:textSize="18sp"
-        android:textStyle="bold"/>
+        android:textSize="18sp" />
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="wrap_content"
