@@ -4,4 +4,30 @@
     <color name="white">#FFFFFFFF</color>
     <color name="light_blue">#12De</color>
     <color name="blue">#C8EBFB</color>
+    <color name="light_beige">#F8F7E5</color>
+    <color name="beige">#ECEBC0</color>
+    <color name="room_shade_blue">#4DA8E3</color>
+    <color name="room_shade_yellow">#F6E900</color>
+    <color name="room_shade_pink">#EE87AC</color>
+    <color name="room_shade_green">#40C380</color>
+    <color name="room_shade_orange">#EE6D19</color>
+    <color name="room_shade_red">#cc1a32</color>
+    <color name="room_shade_maroon">#871A09</color>
+    <color name="room_shade_purple">#8C5C9E</color>
+
+    <!-- my custom color theme -->
+    <color name="background">#fcfcfc</color>
+    <color name="icon_tint">#534343</color>
+    <color name="icon_tint_selected">#211a1a</color>
+    <color name="container">#f5f0f0</color>
+    <color name="container_secondary">#f3eaeb</color>
+    <color name="container_highlight">#ffddaa</color>
+    <color name="container_selected">#ffdad9</color>
+    <color name="container_selected_highlight">#fbeeed</color>
+    <color name="text_color_header">#1f1f1f</color>
+    <color name="text_color_primary">#534343</color>
+    <color name="text_color_secondary">#534343</color>
+    <color name="text_color_tertiary">#9c4146</color>
+    <color name="text_color_tertiary_selected">#400008</color>
+
 </resources>
