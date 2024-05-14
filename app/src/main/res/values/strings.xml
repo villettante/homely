@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">Homely</string>
+    <string name="devices">Devices</string>
+    <string name="home">Home</string>
+    <string name="automation">Automation</string>
+    <string name="me">Me</string>
+    <string name="rooms">Rooms</string>
+</resources>
+
