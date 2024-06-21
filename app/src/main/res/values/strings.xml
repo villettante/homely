@@ -5,5 +5,10 @@
     <string name="automation">Automation</string>
     <string name="me">Me</string>
     <string name="rooms">Rooms</string>
+    <string name="default_web_client_id">768079826724-ddtmiivdits755tue8v1pmrltep7omv9.apps.googleusercontent.com</string>
+    <string name="settings">Settings</string>
+    <string name="description_add_new_home">Create a new home and add your devices</string>
+    <string name="create_a_home">Create a home</string>
+    <string name="create_home">Create home</string>
 </resources>
 

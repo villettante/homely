@@ -18,6 +18,46 @@
 
     <style name="SliderTheme" parent="@style/Widget.Material3.Slider">
         <item name="colorPrimary">@color/black</item>
+        <item name="thumbColor">@color/black</item>
+        <item name="trackColorActive">@color/black</item>
+        <item name="trackColorInactive">@color/blue</item>
+        <item name="trackHeight">50dp</item>
+        <item name="thumbTrackGapSize">1dp</item>
+        <item name="thumbStrokeWidth">2dp</item>
+        <item name="thumbHeight">50dp</item>
+    </style>
+    
+    <style name="roundedImageViewRounded">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
+
+    <!-- Custom Bottom Sheet Dialog Style -->
+    <style name="CustomBottomSheetDialogTheme" parent="Theme.Design.Light.BottomSheetDialog">
+        <item name="bottomSheetStyle">@style/CustomBottomSheetStyle</item>
+    </style>
+
+    <style name="CustomBottomSheetStyle" parent="Widget.Design.BottomSheet.Modal">
+        <item name="android:background">@drawable/home_page_bottom_sheet_background</item>
+    </style>
+
+    <style name="CustomAddButtonTheme" parent="Widget.AppCompat.ImageButton">
+        <item name="android:drawableLeft">@drawable/add_icon</item>
+        <item name="android:drawableTint">@color/text_color_primary</item>
+        <item name="android:drawablePadding">5dp</item>
+        <item name="android:layout_height">30dp</item>
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_gravity">center</item>
+        <item name="android:paddingStart">10dp</item>
+        <item name="android:paddingEnd">15dp</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:elevation">0dp</item>
+        <item name="android:stateListAnimator">@null</item>
+        <item name="textAllCaps">false</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="fontFamily">@font/productsans_medium</item>
+        <item name="android:textColor">@color/text_color_primary</item>
+        <item name="android:background">@drawable/create_button_background</item>
     </style>
 
     <style name="Theme.Homely" parent="Base.Theme.Homely" />

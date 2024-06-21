@@ -16,19 +16,20 @@
 
     <ScrollView
         android:id="@+id/scrollView_appliance"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_width="441dp"
+        android:layout_height="25dp"
         android:layout_marginLeft="15dp"
+        android:layout_marginTop="8dp"
         android:layout_marginRight="15dp"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/appliance_title">
 
         <TextView
             android:id="@+id/fragment_appliance_page_sensor_data"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
-
+            android:layout_height="wrap_content" />
     </ScrollView>
 
     <TextView
@@ -45,16 +46,34 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <TextView
+        android:id="@+id/sensor_data"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="25dp"
+        android:layout_marginStart="25dp"
+        android:textSize="18dp"
+        android:fontFamily="@font/productsans_regular"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintBottom_toTopOf="@+id/appliance_slider"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/appliance_title">
+    </TextView>
+
     <com.google.android.material.slider.Slider
+        android:id="@+id/appliance_slider"
+        style="@style/SliderTheme"
         android:layout_width="274dp"
         android:layout_height="27dp"
-        android:layout_marginTop="44dp"
-        android:theme="@style/SliderTheme"
-        app:thumbColor="@android:color/transparent"
-        app:thumbWidth="0dp"
+        android:layout_marginTop="4dp"
+        android:isIndicator="false"
+        android:stepSize="10"
+        android:valueFrom="0"
+        android:valueTo="100"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.496"
+        app:layout_constraintHorizontal_bias="0.182"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/scrollView_appliance" />
+        app:layout_constraintTop_toBottomOf="@+id/scrollView_appliance"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
