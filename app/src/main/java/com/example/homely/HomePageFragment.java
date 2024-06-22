@@ -49,6 +49,7 @@ import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -60,7 +61,6 @@ public class HomePageFragment extends Fragment implements HomePageBottomSheetDia
     Activity referenceActivity;
     View parentHolder;
     LinearLayout firstRoomsColumn, secondRoomsColumn;
-    ImageView backgroundImage;
     ShapeableImageView accountPhoto;
     TextView roomsTitle;
     TextView sensorDataText;
@@ -71,32 +71,51 @@ public class HomePageFragment extends Fragment implements HomePageBottomSheetDia
     FirebaseAuth firebaseAuth;
     private static final int RC_SIGN_IN = 9001;
     private GoogleSignInClient mGoogleSignInClient;
-    private static final String ARG_USER = "user";
     private User user;
     private FirebaseAuth.AuthStateListener authStateListener;
-    private boolean isListVisible = false;
-
     private final LinkedHashMap<String, ArrayList<String>> roomAppliances = new LinkedHashMap<>();
     DatabaseReference databaseReference;
 
     public static HomePageFragment newInstance(User user) {
         HomePageFragment fragment = new HomePageFragment();
         Bundle args = new Bundle();
-        args.putString("uid", user.getUid());
-        args.putString("displayName", user.getDisplayName());
-        args.putString("email", user.getEmail());
-        args.putString("photoUrl", user.getPhotoUrl());
+        args.putSerializable("user", user);
         fragment.setArguments(args);
         return fragment;
     }
 
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+    private void fetchCurrentHomeName(User user) {
+        for (Home home : user.getHomes()) {
+            if (home.isCurrent()) {
+                title.setText(home.getName());
+                break;
+            }
+        }
+    }
+
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         super.onCreateView(inflater, container, savedInstanceState);
         referenceActivity = getActivity();
         parentHolder = inflater.inflate(R.layout.fragment_home_page, container, false);
+        user = (User) getArguments().getSerializable("user");
+        Log.e("HomePageFragment", "User received: " + user.getEmail());
+        user.getHomes().forEach(home -> Log.e("HomePageFragment/Homes", home.getName()));
+
 
         firebaseAuth = FirebaseAuth.getInstance();
         databaseReference = FirebaseDatabase.getInstance().getReference();
+
+        accountPhoto = parentHolder.findViewById(R.id.accountPhoto);
+        title = parentHolder.findViewById(R.id.title_home_page);
+        topLinearLayout = parentHolder.findViewById(R.id.top_group_home_page);
+
+        if (user.getPhotoUrl() != null) {
+            Glide.with(this).load(user.getPhotoUrl()).into(accountPhoto);
+        } else {
+            Log.e("HomePageFragment", "currentUser is null in onCreateView");
+        }
+
+        fetchCurrentHomeName(user);
 
         authStateListener = firebaseAuth1 -> {
             FirebaseUser firebaseUser = firebaseAuth1.getCurrentUser();
@@ -109,46 +128,15 @@ public class HomePageFragment extends Fragment implements HomePageBottomSheetDia
                 .requestIdToken("768079826724-ddtmiivdits755tue8v1pmrltep7omv9.apps.googleusercontent.com")
                 .requestEmail()
                 .build();
-
         mGoogleSignInClient = GoogleSignIn.getClient(referenceActivity, gso);
 
-        if (getArguments() != null) {
-            String uid = getArguments().getString("uid");
-            String displayName = getArguments().getString("displayName");
-            String email = getArguments().getString("email");
-            String photoUrl = getArguments().getString("photoUrl");
-            user = new User(uid, displayName, email, photoUrl);
-            Log.e("HomePageFragment", "User received: " + user.getEmail());
-        }
-
-        accountPhoto = parentHolder.findViewById(R.id.accountPhoto);
-        title = parentHolder.findViewById(R.id.title_home_page);
-        topLinearLayout = parentHolder.findViewById(R.id.top_group_home_page);
-
-        if (user != null) {
-            Glide.with(this).load(user.getPhotoUrl()).into(accountPhoto);
-        } else {
-            Log.e("HomePageFragment", "currentUser is null in onCreateView");
-        }
-
-        topLinearLayout.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                HomePageBottomSheetDialogFragment bottomSheet = new HomePageBottomSheetDialogFragment();
-                bottomSheet.setOnItemSelectedListener(HomePageFragment.this);
-                bottomSheet.show(getChildFragmentManager(), "HomePageBottomSheetDialogFragment");
-            }
+        HomePageBottomSheetDialogFragment bottomSheet = HomePageBottomSheetDialogFragment.newInstance(user);
+        topLinearLayout.setOnClickListener(v -> {
+            bottomSheet.setOnItemSelectedListener(HomePageFragment.this);
+            bottomSheet.show(getChildFragmentManager(), "HomePageBottomSheetDialogFragment");
         });
 
         accountPhoto.setOnClickListener(v -> signOutAndSignIn());
-
-        //backgroundImage = referenceActivity.findViewById(R.id.background_image);
-        //backgroundImage.setImageResource(R.drawable.background_image_2);
-        //backgroundImage.setClipToOutline(true);
-        //backgroundImage.setAdjustViewBounds(true);
-        //backgroundImage.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        //int greyTint = Color.argb(30, 100, 76, 76);
-        //backgroundImage.setColorFilter(greyTint, PorterDuff.Mode.SRC_ATOP);
 
         ArrayList<String> livingRoomAppliances = new ArrayList<>();
         livingRoomAppliances.add("Bulb");
@@ -308,39 +296,178 @@ public class HomePageFragment extends Fragment implements HomePageBottomSheetDia
             index++;
         }
 
-        /*
-        customButtonView.setOnClickListener(v -> {
-            if (isListVisible) {
-                buttonArrow.setImageResource(R.drawable.chevron_down);
-                listPopupWindow.dismiss();
-            } else {
-                buttonArrow.setImageResource(R.drawable.chevron_up);
-                listPopupWindow.show();
-            }
-            isListVisible = !isListVisible;
-        });
-
-        listPopupWindow.setOnItemClickListener((parent, view, position, id) -> {
-            String selectedLanguage = addresses[position];
-            buttonTitle.setText(selectedLanguage);
-            listPopupWindow.dismiss();
-            buttonArrow.setImageResource(R.drawable.chevron_down);
-            isListVisible = false;
-        });
-
-        buttonTitle.setOnClickListener(v -> {
-            if (isListVisible) {
-                buttonArrow.setImageResource(R.drawable.chevron_down);
-                listPopupWindow.dismiss();
-            } else {
-                buttonArrow.setImageResource(R.drawable.chevron_up);
-                listPopupWindow.show();
-            }
-            isListVisible = !isListVisible;
-        });
-        */
-
         return parentHolder;
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        if (authStateListener != null) {
+            firebaseAuth.removeAuthStateListener(authStateListener);
+        }
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        checkIfUserIsLoggedIn();
+    }
+
+    @Override
+    public void onItemSelected(String text) {
+        title.setText(text);
+    }
+
+    private void checkIfUserIsLoggedIn() {
+        FirebaseUser firebaseUser = firebaseAuth.getCurrentUser();
+        GoogleSignInAccount googleSignInAccount = GoogleSignIn.getLastSignedInAccount(referenceActivity);
+
+        if (firebaseUser == null && googleSignInAccount == null) {
+            Intent intent = new Intent(getActivity(), AuthActivity.class);
+            startActivity(intent);
+            referenceActivity.finish();
+        }
+    }
+
+    private void updateUI(User user) {
+        if (user != null) {
+            if (!user.getPhotoUrl().isEmpty()) {
+                Glide.with(this).load(user.getPhotoUrl()).into(accountPhoto);
+            } else {
+                accountPhoto.setImageResource(R.drawable.ic_launcher_background);
+            }
+        }
+    }
+
+    private void signOutAndSignIn() {
+        mGoogleSignInClient.signOut().addOnCompleteListener(referenceActivity, task -> {
+            Intent signInIntent = mGoogleSignInClient.getSignInIntent();
+            startActivityForResult(signInIntent, RC_SIGN_IN);
+        });
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == RC_SIGN_IN) {
+            Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
+            try {
+                GoogleSignInAccount account = task.getResult(ApiException.class);
+                if (account != null) {
+                    Log.d("HomePageFragment", account.getEmail() + " Signed in successfully");
+                    firebaseAuthWithGoogle(account);
+                    Log.d("HomePageFragment", account.getEmail() + " Signed in successfully");
+                } else {
+                    Log.w("HomePageFragment", "Account is null");
+                }
+            } catch (ApiException e) {
+                Log.w("HomePageFragment", "signInResult:failed code=" + e.getStatusCode());
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private void firebaseAuthWithGoogle(GoogleSignInAccount acct) {
+        AuthCredential credential = GoogleAuthProvider.getCredential(acct.getIdToken(), null);
+        firebaseAuth.signInWithCredential(credential)
+                .addOnCompleteListener(referenceActivity, task -> {
+                    if (task.isSuccessful()) {
+                        FirebaseUser user = firebaseAuth.getCurrentUser();
+                        if (user != null) {
+                            checkUserInDatabase(user);
+                        }
+                    } else {
+                        Log.w("HomePageFragment", "signInWithCredential:failure", task.getException());
+                        Toast.makeText(referenceActivity, "Authentication Failed.", Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
+
+    private void checkUserInDatabase(FirebaseUser firebaseUser) {
+        DatabaseReference userRef = databaseReference.child("users").child(firebaseUser.getUid());
+        userRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (!snapshot.exists()) {
+                    user = new User(firebaseUser.getUid(), firebaseUser.getDisplayName(), firebaseUser.getEmail(), (firebaseUser.getPhotoUrl() != null) ? firebaseUser.getPhotoUrl().toString() : "", new ArrayList<>());
+                    storeNewUserData(firebaseUser, user);
+                } else {
+                    String uid = firebaseUser.getUid();
+                    String displayName = snapshot.child("displayName").getValue(String.class);
+                    String email = snapshot.child("email").getValue(String.class);
+                    String photoUrl = snapshot.child("photoUrl").getValue(String.class);
+
+                    user = new User(uid, displayName, email, photoUrl, new ArrayList<>());
+                    fetchHomesForUser(user, firebaseUser.getUid());
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Log.e("HomePageFragment", "retrieveUserData onCancelled: " + error.getMessage());
+            }
+        });
+    }
+
+    private void fetchHomesForUser(User user, String uid) {
+        DatabaseReference homesRef = databaseReference.child("users").child(uid).child("homes");
+        homesRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                List<Home> homes = new ArrayList<>();
+                for (DataSnapshot homeSnapshot : dataSnapshot.getChildren()) {
+                    String homeId = homeSnapshot.getKey();
+                    boolean isCurrentHome = homeSnapshot.getValue(Boolean.class);
+                    fetchHomeDetails(homeId, isCurrentHome, homes, user, uid);
+                    updateUI(user);
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Log.e("HomePageFragment", "fetchHomesForUser onCancelled: " + error.getMessage());
+            }
+        });
+    }
+
+    private void fetchHomeDetails(String homeId, boolean isCurrentHome, List<Home> homes, User user, String uid) {
+        DatabaseReference homeRef = databaseReference.child("homes").child(homeId);
+        homeRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    String homeName = dataSnapshot.child("name").getValue(String.class);
+                    Home home = new Home(homeId, homeName, isCurrentHome);
+                    homes.add(home);
+                    if (homes.size() == dataSnapshot.child("homes").getChildrenCount()) {
+                        user.setHomes(homes);
+                    }
+                }
+                else {
+                    Intent intent = new Intent(referenceActivity, MainActivity.class);
+                    intent.putExtra("user", user);
+                    startActivity(intent);
+                    referenceActivity.finish();
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Log.e("HomePageFragment", "fetchHomeDetails onCancelled: " + error.getMessage());
+            }
+        });
+    }
+
+    private void storeNewUserData(FirebaseUser firebaseUser, User user) {
+        databaseReference.child("users").child(firebaseUser.getUid()).setValue(user)
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        Log.d("HomePageFragment", "User data saved successfully.");
+                        updateUI(user);
+                    } else {
+                        Log.w("HomePageFragment", "Failed to save user data.", task.getException());
+                    }
+                });
     }
 
     @Override

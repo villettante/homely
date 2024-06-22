@@ -60,5 +60,22 @@
         <item name="android:background">@drawable/create_button_background</item>
     </style>
 
+    <style name="CustomTextInputStyle" parent="">
+        <item name="fontFamily">@font/productsans_regular</item>
+        <item name="boxBackgroundColor">@color/container</item>
+        <item name="boxStrokeColor">@color/container_secondary</item>
+        <item name="hintTextColor">@color/text_color_primary</item>
+        <item name="helperTextTextColor">@color/text_color_secondary</item>
+        <item name="android:textColor">@color/text_color_primary</item>
+        <item name="android:textColorHint">@color/text_color_secondary</item>
+    </style>
+
+    <style name="CustomTextInputEditTextStyle" parent="">
+        <item name="fontFamily">@font/productsans_regular</item>
+        <item name="background">@color/container</item>
+        <item name="android:textColor">@color/text_color_primary</item>
+        <item name="android:textColorHint">@color/text_color_secondary</item>
+    </style>
+
     <style name="Theme.Homely" parent="Base.Theme.Homely" />
 </resources>

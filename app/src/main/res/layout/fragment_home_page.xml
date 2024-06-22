@@ -75,7 +75,6 @@
                 android:layout_gravity="start|center_vertical"
                 android:layout_marginEnd="5dp"
                 android:fontFamily="@font/productsans_regular"
-                android:text="@string/home"
                 android:textColor="@android:color/black"
                 android:textSize="20sp" />
 
