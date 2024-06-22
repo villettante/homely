@@ -32,6 +32,9 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static android.content.Context.MODE_PRIVATE;
 
 public class SettingsFragment extends Fragment {
@@ -43,33 +46,28 @@ public class SettingsFragment extends Fragment {
     ShapeableImageView accountPhoto;
     private GoogleSignInClient mGoogleSignInClient;
     private static final int RC_SIGN_IN = 9001;
+    private boolean signInFromSettings = false;
     private User user;
     private FirebaseAuth.AuthStateListener authStateListener;
 
     public static SettingsFragment newInstance(User user) {
         SettingsFragment fragment = new SettingsFragment();
         Bundle args = new Bundle();
-        args.putString("uid", user.getUid());
-        args.putString("displayName", user.getDisplayName());
-        args.putString("email", user.getEmail());
-        args.putString("photoUrl", user.getPhotoUrl());
+        args.putSerializable("user", user);
         fragment.setArguments(args);
         return fragment;
+    }
+
+    public void setSignInFromSettings(boolean signInFromSettings) {
+        this.signInFromSettings = signInFromSettings;
     }
 
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         super.onCreateView(inflater, container, savedInstanceState);
         referenceActivity = getActivity();
         parentHolder = inflater.inflate(R.layout.fragment_settings_page, container, false);
-
-        if (getArguments() != null) {
-            String uid = getArguments().getString("uid");
-            String displayName = getArguments().getString("displayName");
-            String email = getArguments().getString("email");
-            String photoUrl = getArguments().getString("photoUrl");
-            user = new User(uid, displayName, email, photoUrl);
-            Log.e("SettingsFragment", "User received: " + user.getEmail());
-        }
+        user = (User) getArguments().getSerializable("user");
+        Log.e("SettingsFragment", "User received: " + user.getEmail());
 
         firebaseAuth = FirebaseAuth.getInstance();
         databaseReference = FirebaseDatabase.getInstance().getReference();
@@ -102,12 +100,6 @@ public class SettingsFragment extends Fragment {
     }
 
     @Override
-    public void onStart() {
-        super.onStart();
-        firebaseAuth.addAuthStateListener(authStateListener);
-    }
-
-    @Override
     public void onStop() {
         super.onStop();
         if (authStateListener != null) {
@@ -115,8 +107,28 @@ public class SettingsFragment extends Fragment {
         }
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        checkIfUserIsLoggedIn();
+    }
+
+    private void checkIfUserIsLoggedIn() {
+        FirebaseUser firebaseUser = firebaseAuth.getCurrentUser();
+        GoogleSignInAccount googleSignInAccount = GoogleSignIn.getLastSignedInAccount(referenceActivity);
+
+        if (firebaseUser == null && googleSignInAccount == null) {
+            Intent intent = new Intent(getActivity(), AuthActivity.class);
+            startActivity(intent);
+            referenceActivity.finish();
+        }
+    }
+
     private void signOutAndSignIn() {
         mGoogleSignInClient.signOut().addOnCompleteListener(referenceActivity, task -> {
+            if (referenceActivity instanceof MainActivity) {
+                ((MainActivity) referenceActivity).setSignInFromSettings(true);
+            }
             Intent signInIntent = mGoogleSignInClient.getSignInIntent();
             startActivityForResult(signInIntent, RC_SIGN_IN);
         });
@@ -133,6 +145,9 @@ public class SettingsFragment extends Fragment {
                 if (account != null) {
                     Log.d("SettingsFragment", account.getEmail() + " Signed in successfully");
                     firebaseAuthWithGoogle(account);
+                    Log.d("SettingsFragment", account.getEmail() + " Signed in successfully");
+                } else {
+                    Log.w("SettingsFragment", "Account is null");
                 }
             } catch (ApiException e) {
                 Log.w("SettingsFragment", "signInResult:failed code=" + e.getStatusCode());
@@ -140,7 +155,6 @@ public class SettingsFragment extends Fragment {
             }
         }
     }
-
     private void firebaseAuthWithGoogle(GoogleSignInAccount acct) {
         AuthCredential credential = GoogleAuthProvider.getCredential(acct.getIdToken(), null);
         firebaseAuth.signInWithCredential(credential)
@@ -160,55 +174,87 @@ public class SettingsFragment extends Fragment {
     private void checkUserInDatabase(FirebaseUser firebaseUser) {
         DatabaseReference userRef = databaseReference.child("users").child(firebaseUser.getUid());
         userRef.addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                User user;
                 if (!snapshot.exists()) {
-                    user = new User(firebaseUser.getUid(), firebaseUser.getDisplayName(), firebaseUser.getEmail(), (firebaseUser.getPhotoUrl() != null) ? firebaseUser.getPhotoUrl().toString() : "");
-                    storeNewUserData(firebaseUser);
+                    user = new User(firebaseUser.getUid(), firebaseUser.getDisplayName(), firebaseUser.getEmail(), (firebaseUser.getPhotoUrl() != null) ? firebaseUser.getPhotoUrl().toString() : "", new ArrayList<>());
+                    storeNewUserData(firebaseUser, user);
                 } else {
-                    user = snapshot.getValue(User.class);
-                }
-                updateUI(user);
-                if (user != null) {
-                    saveUserToPreferences(user);
-                    if (referenceActivity instanceof MainActivity) {
-                        ((MainActivity) referenceActivity).reloadFragments();
-                    }
+                    String uid = firebaseUser.getUid();
+                    String displayName = snapshot.child("displayName").getValue(String.class);
+                    String email = snapshot.child("email").getValue(String.class);
+                    String photoUrl = snapshot.child("photoUrl").getValue(String.class);
+
+                    user = new User(uid, displayName, email, photoUrl, new ArrayList<>());
+                    fetchHomesForUser(user, firebaseUser.getUid());
                 }
             }
 
             @Override
-            public void onCancelled(@NonNull DatabaseError error) {}
+            public void onCancelled(@NonNull DatabaseError error) {
+                Log.e("SettingsFragment", "retrieveUserData onCancelled: " + error.getMessage());
+            }
         });
     }
 
-    private void storeNewUserData(FirebaseUser user) {
-        String uid = user.getUid();
-        String displayName = user.getDisplayName();
-        String email = user.getEmail();
-        String photoUrl = (user.getPhotoUrl() != null) ? user.getPhotoUrl().toString() : "";
+    private void fetchHomesForUser(User user, String uid) {
+        DatabaseReference homesRef = databaseReference.child("users").child(uid).child("homes");
+        homesRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                List<Home> homes = new ArrayList<>();
+                for (DataSnapshot homeSnapshot : dataSnapshot.getChildren()) {
+                    String homeId = homeSnapshot.getKey();
+                    boolean isCurrentHome = Boolean.TRUE.equals(homeSnapshot.getValue(Boolean.class));
+                    fetchHomeDetails(homeId, isCurrentHome, homes, user, uid);
+                    updateUI(user);
+                }
+            }
 
-        User newUser = new User(uid, displayName, email, photoUrl);
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Log.e("SettingsFragment", "fetchHomesForUser onCancelled: " + error.getMessage());
+            }
+        });
+    }
 
-        databaseReference.child("users").child(user.getUid()).setValue(newUser)
+    private void fetchHomeDetails(String homeId, boolean isCurrentHome, List<Home> homes, User user, String uid) {
+        DatabaseReference homeRef = databaseReference.child("homes").child(homeId);
+        homeRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    String homeName = dataSnapshot.child("name").getValue(String.class);
+                    Home home = new Home(homeId, homeName, isCurrentHome);
+                    homes.add(home);
+                    if (homes.size() == dataSnapshot.child("homes").getChildrenCount()) {
+                        user.setHomes(homes);
+                    }
+                }
+                else {
+                    Intent intent = new Intent(referenceActivity, SettingsFragment.class);
+                    intent.putExtra("user", user);
+                    startActivity(intent);
+                    referenceActivity.finish();
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Log.e("SettingsFragment", "fetchHomeDetails onCancelled: " + error.getMessage());
+            }
+        });
+    }
+
+    private void storeNewUserData(FirebaseUser firebaseUser, User user) {
+        databaseReference.child("users").child(firebaseUser.getUid()).setValue(user)
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
                         Log.d("SettingsFragment", "User data saved successfully.");
+                        updateUI(user);
                     } else {
                         Log.w("SettingsFragment", "Failed to save user data.", task.getException());
                     }
                 });
-    }
-
-    private void saveUserToPreferences(User user) {
-        SharedPreferences sharedPreferences = referenceActivity.getSharedPreferences("user_prefs", MODE_PRIVATE);
-        SharedPreferences.Editor editor = sharedPreferences.edit();
-        editor.putString("uid", user.getUid());
-        editor.putString("displayName", user.getDisplayName());
-        editor.putString("email", user.getEmail());
-        editor.putString("photoUrl", user.getPhotoUrl());
-        editor.apply();
     }
 
     private void updateUI(User user) {

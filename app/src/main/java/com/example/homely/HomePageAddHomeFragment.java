@@ -32,6 +32,9 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static android.content.Context.MODE_PRIVATE;
 
 public class HomePageAddHomeFragment extends Fragment {
@@ -50,10 +53,7 @@ public class HomePageAddHomeFragment extends Fragment {
     public static HomePageAddHomeFragment newInstance(User user) {
         HomePageAddHomeFragment fragment = new HomePageAddHomeFragment();
         Bundle args = new Bundle();
-        args.putString("uid", user.getUid());
-        args.putString("displayName", user.getDisplayName());
-        args.putString("email", user.getEmail());
-        args.putString("photoUrl", user.getPhotoUrl());
+        args.putSerializable("user", user);
         fragment.setArguments(args);
         return fragment;
     }
@@ -62,15 +62,12 @@ public class HomePageAddHomeFragment extends Fragment {
         super.onCreateView(inflater, container, savedInstanceState);
         referenceActivity = getActivity();
         parentHolder = inflater.inflate(R.layout.fragment_home_page_add_home, container, false);
+        user = (User) getArguments().getSerializable("user");
+        Log.e("HomePageAddHomeFragment", "User received: " + user.getEmail());
+        user.getHomes().forEach(home -> Log.e("HomePageAddHomeFragment/Homes", home.getName()));
 
-        if (getArguments() != null) {
-            String uid = getArguments().getString("uid");
-            String displayName = getArguments().getString("displayName");
-            String email = getArguments().getString("email");
-            String photoUrl = getArguments().getString("photoUrl");
-            user = new User(uid, displayName, email, photoUrl);
-            Log.e("HomePageAddHomeFragment", "User received: " + user.getEmail());
-        }
+        firebaseAuth = FirebaseAuth.getInstance();
+        databaseReference = FirebaseDatabase.getInstance().getReference();
 
         accountPhoto = parentHolder.findViewById(R.id.account_photo_home_page_add_home);
         if (user != null) {
@@ -81,11 +78,9 @@ public class HomePageAddHomeFragment extends Fragment {
 
         createHome = parentHolder.findViewById(R.id.create_home_button);
         createHome.setOnClickListener(v -> {
-
+            Intent intent = new Intent(getActivity(), AddHomeActivity.class);
+            startActivity(intent);
         });
-
-        firebaseAuth = FirebaseAuth.getInstance();
-        databaseReference = FirebaseDatabase.getInstance().getReference();
 
         authStateListener = firebaseAuth1 -> {
             FirebaseUser firebaseUser = firebaseAuth1.getCurrentUser();
@@ -107,16 +102,27 @@ public class HomePageAddHomeFragment extends Fragment {
     }
 
     @Override
-    public void onStart() {
-        super.onStart();
-        firebaseAuth.addAuthStateListener(authStateListener);
-    }
-
-    @Override
     public void onStop() {
         super.onStop();
         if (authStateListener != null) {
             firebaseAuth.removeAuthStateListener(authStateListener);
+        }
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        checkIfUserIsLoggedIn();
+    }
+
+    private void checkIfUserIsLoggedIn() {
+        FirebaseUser firebaseUser = firebaseAuth.getCurrentUser();
+        GoogleSignInAccount googleSignInAccount = GoogleSignIn.getLastSignedInAccount(referenceActivity);
+
+        if (firebaseUser == null && googleSignInAccount == null) {
+            Intent intent = new Intent(getActivity(), AuthActivity.class);
+            startActivity(intent);
+            referenceActivity.finish();
         }
     }
 
@@ -154,8 +160,9 @@ public class HomePageAddHomeFragment extends Fragment {
                 .addOnCompleteListener(referenceActivity, task -> {
                     if (task.isSuccessful()) {
                         FirebaseUser user = firebaseAuth.getCurrentUser();
-                        Log.d("HomePageAddHomeFragment", " Currently signed in: " + user.getEmail());
-                        checkUserInDatabase(user);
+                        if (user != null) {
+                            checkUserInDatabase(user);
+                        }
                     } else {
                         Log.w("HomePageAddHomeFragment", "signInWithCredential:failure", task.getException());
                         Toast.makeText(referenceActivity, "Authentication Failed.", Toast.LENGTH_SHORT).show();
@@ -166,45 +173,83 @@ public class HomePageAddHomeFragment extends Fragment {
     private void checkUserInDatabase(FirebaseUser firebaseUser) {
         DatabaseReference userRef = databaseReference.child("users").child(firebaseUser.getUid());
         userRef.addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if (!snapshot.exists()) {
-                    user = new User(firebaseUser.getUid(), firebaseUser.getDisplayName(), firebaseUser.getEmail(), (firebaseUser.getPhotoUrl() != null) ? firebaseUser.getPhotoUrl().toString() : "");
-                    storeNewUserData(firebaseUser);
+                    user = new User(firebaseUser.getUid(), firebaseUser.getDisplayName(), firebaseUser.getEmail(), (firebaseUser.getPhotoUrl() != null) ? firebaseUser.getPhotoUrl().toString() : "", new ArrayList<>());
+                    storeNewUserData(firebaseUser, user);
                 } else {
-                    user = snapshot.getValue(User.class);
-                }
-                updateUI(user);
-                if (user != null) {
-                    saveUserToPreferences(user);
-                    if (referenceActivity instanceof MainActivity) {
-                        ((MainActivity) referenceActivity).reloadFragments();
-                    }
-                }
-                else {
-                    Log.e("HomePageAddHomeFragment", "Could not update the new preferences");
+                    String uid = firebaseUser.getUid();
+                    String displayName = snapshot.child("displayName").getValue(String.class);
+                    String email = snapshot.child("email").getValue(String.class);
+                    String photoUrl = snapshot.child("photoUrl").getValue(String.class);
+
+                    user = new User(uid, displayName, email, photoUrl, new ArrayList<>());
+                    fetchHomesForUser(user, firebaseUser.getUid());
                 }
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
-                // Handle possible errors.
+                Log.e("HomePageAddHomeFragment", "retrieveUserData onCancelled: " + error.getMessage());
             }
         });
     }
 
-    private void storeNewUserData(FirebaseUser user) {
-        String uid = user.getUid();
-        String displayName = user.getDisplayName();
-        String email = user.getEmail();
-        String photoUrl = (user.getPhotoUrl() != null) ? user.getPhotoUrl().toString() : "";
+    private void fetchHomesForUser(User user, String uid) {
+        DatabaseReference homesRef = databaseReference.child("users").child(uid).child("homes");
+        homesRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                List<Home> homes = new ArrayList<>();
+                for (DataSnapshot homeSnapshot : dataSnapshot.getChildren()) {
+                    String homeId = homeSnapshot.getKey();
+                    boolean isCurrentHome = Boolean.TRUE.equals(homeSnapshot.getValue(Boolean.class));
+                    fetchHomeDetails(homeId, isCurrentHome, homes, user, uid);
+                    updateUI(user);
+                }
+            }
 
-        User newUser = new User(uid, displayName, email, photoUrl);
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Log.e("HomePageAddHomeFragment", "fetchHomesForUser onCancelled: " + error.getMessage());
+            }
+        });
+    }
 
-        databaseReference.child("users").child(user.getUid()).setValue(newUser)
+    private void fetchHomeDetails(String homeId, boolean isCurrentHome, List<Home> homes, User user, String uid) {
+        DatabaseReference homeRef = databaseReference.child("homes").child(homeId);
+        homeRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    String homeName = dataSnapshot.child("name").getValue(String.class);
+                    Home home = new Home(homeId, homeName, isCurrentHome);
+                    homes.add(home);
+                    if (homes.size() == dataSnapshot.child("homes").getChildrenCount()) {
+                        user.setHomes(homes);
+                    }
+                }
+                else {
+                    Intent intent = new Intent(referenceActivity, MainActivity.class);
+                    intent.putExtra("user", user);
+                    startActivity(intent);
+                    referenceActivity.finish();
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Log.e("HomePageAddHomeFragment", "fetchHomeDetails onCancelled: " + error.getMessage());
+            }
+        });
+    }
+
+    private void storeNewUserData(FirebaseUser firebaseUser, User user) {
+        databaseReference.child("users").child(firebaseUser.getUid()).setValue(user)
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
                         Log.d("HomePageAddHomeFragment", "User data saved successfully.");
+                        updateUI(user);
                     } else {
                         Log.w("HomePageAddHomeFragment", "Failed to save user data.", task.getException());
                     }
@@ -219,15 +264,5 @@ public class HomePageAddHomeFragment extends Fragment {
                 accountPhoto.setImageResource(R.drawable.ic_launcher_background);
             }
         }
-    }
-
-    private void saveUserToPreferences(User user) {
-        SharedPreferences sharedPreferences = referenceActivity.getSharedPreferences("user_prefs", MODE_PRIVATE);
-        SharedPreferences.Editor editor = sharedPreferences.edit();
-        editor.putString("uid", user.getUid());
-        editor.putString("displayName", user.getDisplayName());
-        editor.putString("email", user.getEmail());
-        editor.putString("photoUrl", user.getPhotoUrl());
-        editor.apply();
     }
 }
