@@ -12,7 +12,6 @@ public class User implements Serializable {
     private String photoUrl;
     private List<Home> homes;
 
-
     public User() {}
 
     public User(String uid, String displayName, String email, String photoUrl, List<Home> homes) {

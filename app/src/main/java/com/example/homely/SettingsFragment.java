@@ -57,7 +57,6 @@ public class SettingsFragment extends Fragment {
         fragment.setArguments(args);
         return fragment;
     }
-
     public void setSignInFromSettings(boolean signInFromSettings) {
         this.signInFromSettings = signInFromSettings;
     }
@@ -155,6 +154,7 @@ public class SettingsFragment extends Fragment {
             }
         }
     }
+
     private void firebaseAuthWithGoogle(GoogleSignInAccount acct) {
         AuthCredential credential = GoogleAuthProvider.getCredential(acct.getIdToken(), null);
         firebaseAuth.signInWithCredential(credential)

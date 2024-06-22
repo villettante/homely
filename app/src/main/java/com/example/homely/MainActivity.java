@@ -2,6 +2,7 @@ package com.example.homely;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
@@ -195,5 +196,100 @@ public class MainActivity extends AppCompatActivity {
 
     public void setSignInFromSettings(boolean signInFromSettings) {
         this.signInFromSettings = signInFromSettings;
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        firebaseAuth.addAuthStateListener(authStateListener);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (authStateListener != null) {
+            firebaseAuth.removeAuthStateListener(authStateListener);
+        }
+    }
+
+    private User getUserFromPreferences() {
+        SharedPreferences sharedPreferences = getSharedPreferences("user_prefs", MODE_PRIVATE);
+        String uid = sharedPreferences.getString("uid", null);
+        String displayName = sharedPreferences.getString("displayName", null);
+        String email = sharedPreferences.getString("email", null);
+        String photoUrl = sharedPreferences.getString("photoUrl", null);
+
+        if (uid != null) {
+            return new User(uid, displayName, email, photoUrl);
+        }
+        return null;
+    }
+
+    private void checkUserSignIn() {
+        if (currentUser == null) {
+            Log.d("MainActivity", "No user is signed in");
+            redirectToAuth();
+        }
+        else {
+            User user = new User(currentUser.getUid(), currentUser.getDisplayName(), currentUser.getEmail(), String.valueOf(currentUser.getPhotoUrl()));
+            initializeUI(user);
+        }
+    }
+
+    private void initializeUI(User user) {
+        Log.e("MainActivity", "User user uid: " + user.getUid() + ", email: " + user.getEmail());
+        Log.e("MainActivity", "FirebaseUser user uid: " + currentUser.getUid() + ", email: " + currentUser.getEmail());
+
+        databaseReference.child("users").child(currentUser.getUid()).child("homes")
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                        saveUserToPreferences(user);
+                        if (!dataSnapshot.exists() || dataSnapshot.getChildrenCount() == 0) {
+                            getSupportFragmentManager().beginTransaction().replace(R.id.flFragment, HomePageAddHomeFragment.newInstance(user)).commit();
+                        } else {
+                            getSupportFragmentManager().beginTransaction().replace(R.id.flFragment, HomePageFragment.newInstance(user)).commit();
+                        }
+                    }
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError databaseError) {
+                        Toast.makeText(MainActivity.this, "Database error: " + databaseError.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                });
+
+    }
+
+    private void redirectToAuth() {
+        Intent intent = new Intent(this, AuthActivity.class);
+        startActivity(intent);
+        finish();
+    }
+
+    public void reloadFragments() {
+        BottomNavigationView bottomNavigationView = findViewById(R.id.bottomNavigationView);
+
+        bottomNavigationView.setOnItemSelectedListener(item -> {
+            if (item.getItemId() == R.id.bottom_nav_home) {
+                initializeUI(user);
+                return true;
+            }
+            if (item.getItemId() == R.id.bottom_nav_settings) {
+                getSupportFragmentManager().beginTransaction()
+                        .replace(R.id.flFragment, SettingsFragment.newInstance(user))
+                        .commit();
+                return true;
+            }
+            return false;
+        });
+    }
+
+    private void saveUserToPreferences(User user) {
+        SharedPreferences sharedPreferences = getSharedPreferences("user_prefs", MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putString("uid", user.getUid());
+        editor.putString("displayName", user.getDisplayName());
+        editor.putString("email", user.getEmail());
+        editor.putString("photoUrl", user.getPhotoUrl());
+        editor.apply();
     }
 }

@@ -127,6 +127,7 @@ public class HomePageBottomSheetDialogFragment extends BottomSheetDialogFragment
                 adapter.selectButton(0);
             }
         });
+      
         return view;
     }
 }
