@@ -136,7 +136,6 @@ public class HomePageFragment extends Fragment implements HomePageBottomSheetDia
                 .requestIdToken("768079826724-ddtmiivdits755tue8v1pmrltep7omv9.apps.googleusercontent.com")
                 .requestEmail()
                 .build();
-
         mGoogleSignInClient = GoogleSignIn.getClient(referenceActivity, gso);
 
         HomePageBottomSheetDialogFragment bottomSheet = HomePageBottomSheetDialogFragment.newInstance(user);
@@ -569,6 +568,157 @@ public class HomePageFragment extends Fragment implements HomePageBottomSheetDia
                     if (task.isSuccessful()) {
                         Log.d("HomePageFragment", "User data saved successfully.");
                         updateUI(user);
+                    } else {
+                        Log.w("HomePageFragment", "Failed to save user data.", task.getException());
+                    }
+                });
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        firebaseAuth.addAuthStateListener(authStateListener);
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        if (authStateListener != null) {
+            firebaseAuth.removeAuthStateListener(authStateListener);
+        }
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        checkIfUserIsLoggedIn();
+    }
+
+    @Override
+    public void onItemSelected(String text) {
+        title.setText(text);
+    }
+
+    private void checkIfUserIsLoggedIn() {
+        FirebaseUser firebaseUser = firebaseAuth.getCurrentUser();
+        GoogleSignInAccount googleSignInAccount = GoogleSignIn.getLastSignedInAccount(referenceActivity);
+
+        if (firebaseUser == null && googleSignInAccount == null) {
+            Intent intent = new Intent(getActivity(), AuthActivity.class);
+            startActivity(intent);
+            referenceActivity.finish();
+        }
+    }
+
+    private void updateUI(User user) {
+        if (user != null) {
+            if (!user.getPhotoUrl().isEmpty()) {
+                Glide.with(this).load(user.getPhotoUrl()).into(accountPhoto);
+            } else {
+                accountPhoto.setImageResource(R.drawable.ic_launcher_background);
+            }
+        }
+    }
+
+    private void saveUserToPreferences(User user) {
+        SharedPreferences sharedPreferences = referenceActivity.getSharedPreferences("user_prefs", MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putString("uid", user.getUid());
+        editor.putString("displayName", user.getDisplayName());
+        editor.putString("email", user.getEmail());
+        editor.putString("photoUrl", user.getPhotoUrl());
+        editor.apply();
+    }
+
+    private void signOutAndSignIn() {
+        mGoogleSignInClient.signOut().addOnCompleteListener(referenceActivity, task -> {
+            firebaseAuth.signOut();
+            Intent signInIntent = mGoogleSignInClient.getSignInIntent();
+            startActivityForResult(signInIntent, RC_SIGN_IN);
+        });
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == RC_SIGN_IN) {
+            Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
+            try {
+                GoogleSignInAccount account = task.getResult(ApiException.class);
+                if (account != null) {
+                    Log.d("HomePageFragment", account.getEmail() + " Signed in successfully");
+                    firebaseAuthWithGoogle(account);
+                    Log.d("HomePageFragment", account.getEmail() + " Signed in successfully");
+                } else {
+                    Log.w("HomePageFragment", "Account is null");
+                }
+            } catch (ApiException e) {
+                Log.w("HomePageFragment", "signInResult:failed code=" + e.getStatusCode());
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private void firebaseAuthWithGoogle(GoogleSignInAccount acct) {
+        AuthCredential credential = GoogleAuthProvider.getCredential(acct.getIdToken(), null);
+        firebaseAuth.signInWithCredential(credential)
+                .addOnCompleteListener(referenceActivity, task -> {
+                    if (task.isSuccessful()) {
+                        FirebaseUser user = firebaseAuth.getCurrentUser();
+                        if (user != null) {
+                            checkUserInDatabase(user);
+                        }
+                    } else {
+                        Log.w("HomePageFragment", "signInWithCredential:failure", task.getException());
+                        Toast.makeText(referenceActivity, "Authentication Failed.", Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
+
+    private void checkUserInDatabase(FirebaseUser firebaseUser) {
+        DatabaseReference userRef = databaseReference.child("users").child(firebaseUser.getUid());
+        userRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                User user;
+                if (!snapshot.exists()) {
+                    user = new User(firebaseUser.getUid(), firebaseUser.getDisplayName(), firebaseUser.getEmail(), (firebaseUser.getPhotoUrl() != null) ? firebaseUser.getPhotoUrl().toString() : "");
+                    storeNewUserData(firebaseUser);
+                } else {
+                    user = snapshot.getValue(User.class);
+                }
+                updateUI(user);
+                if (user != null) {
+                    saveUserToPreferences(user);
+                    if (referenceActivity instanceof MainActivity) {
+                        ((MainActivity) referenceActivity).reloadFragments();
+                    }
+                }
+                else {
+                    Log.e("HomePageFragment", "Could not update the new preferences");
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                // Handle possible errors.
+            }
+        });
+    }
+
+    private void storeNewUserData(FirebaseUser user) {
+        String uid = user.getUid();
+        String displayName = user.getDisplayName();
+        String email = user.getEmail();
+        String photoUrl = (user.getPhotoUrl() != null) ? user.getPhotoUrl().toString() : "";
+
+        User newUser = new User(uid, displayName, email, photoUrl);
+
+        databaseReference.child("users").child(user.getUid()).setValue(newUser)
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        Log.d("HomePageFragment", "User data saved successfully.");
                     } else {
                         Log.w("HomePageFragment", "Failed to save user data.", task.getException());
                     }

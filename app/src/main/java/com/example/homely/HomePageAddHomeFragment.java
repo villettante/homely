@@ -101,7 +101,6 @@ public class HomePageAddHomeFragment extends Fragment {
         return parentHolder;
     }
 
-    @Override
     public void onStop() {
         super.onStop();
         if (authStateListener != null) {
