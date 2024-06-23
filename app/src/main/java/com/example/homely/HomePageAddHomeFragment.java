@@ -258,7 +258,7 @@ public class HomePageAddHomeFragment extends Fragment {
     private void updateUI(User user) {
         if (user != null) {
             if (!user.getPhotoUrl().isEmpty()) {
-                Glide.with(this).load(user.getPhotoUrl()).into(accountPhoto);
+                Glide.with(referenceActivity).load(user.getPhotoUrl()).into(accountPhoto);
             } else {
                 accountPhoto.setImageResource(R.drawable.ic_launcher_background);
             }

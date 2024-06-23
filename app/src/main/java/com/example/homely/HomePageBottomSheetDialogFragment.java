@@ -27,20 +27,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class HomePageBottomSheetDialogFragment extends BottomSheetDialogFragment {
     public HomePageBottomSheetDialogFragment() {}
     private OnItemSelectedListener onItemSelectedListener;
-    private CarouselAdapter adapter;
     private TextView bottomSheetTitle;
     DatabaseReference databaseReference;
-    List<Home> homes;
-    Home currentHome;
     User user;
-
-    public HomePageBottomSheetDialogFragment(DatabaseReference databaseReference) {
-        this.databaseReference = databaseReference;
-        this.homes = new ArrayList<>();
-    }
 
     public interface OnItemSelectedListener {
         void onItemSelected(String text);
+
+        void onItemClick(DeviceCategoryItem item);
     }
 
     public void setOnItemSelectedListener(OnItemSelectedListener listener) {
@@ -60,33 +54,21 @@ public class HomePageBottomSheetDialogFragment extends BottomSheetDialogFragment
         return fragment;
     }
 
-    private void fetchHomeNames(User user, OnFetchCompleteListener listener) {
+    private String getCurrentHomeName(User user) {
         for (Home home : user.getHomes()) {
-            databaseReference.child("homes").child(home.getId())
-                    .addListenerForSingleValueEvent(new ValueEventListener() {
-                        @Override
-                        public void onDataChange(@NonNull DataSnapshot snapshot) {
-                            if (snapshot.exists()) {
-                                String homeName = snapshot.child("name").getValue(String.class);
-                                home.setName(homeName);
-                                if (home.isCurrent()) {
-                                    currentHome = home;
-                                }
-                            }
-
-                            if (homes.size() == user.getHomes().size()) {
-                                listener.onFetchComplete();
-                            }
-                        }
-
-                        @Override
-                        public void onCancelled(@NonNull DatabaseError error) {
-                            if (homes.size() == user.getHomes().size()) {
-                                listener.onFetchComplete();
-                            }
-                        }
-                    });
+            if (home.isCurrent()) {
+                return home.getName();
+            }
         }
+        return null;
+    }
+
+    private List<String> getUserHomes(User user) {
+        List<String> homes = new ArrayList<>();
+        for (Home home : user.getHomes()) {
+            homes.add(home.getName());
+        }
+        return homes;
     }
 
     @Nullable
@@ -104,8 +86,14 @@ public class HomePageBottomSheetDialogFragment extends BottomSheetDialogFragment
         RecyclerView recyclerView = view.findViewById(R.id.recycler_view);
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
 
-        homes = new ArrayList<>();
-        fetchHomeNames(user, new OnFetchCompleteListener() {
+        String currentHomeName = getCurrentHomeName(user);
+        if (currentHomeName != null) {
+            bottomSheetTitle.setText(currentHomeName);
+        }
+
+        List<String> homes = getUserHomes(user);
+
+        CarouselAdapter adapter = new CarouselAdapter(getContext(), homes, HomePageBottomSheetDialogFragment.this, new CarouselAdapter.OnItemClickListener() {
             @Override
             public void onFetchComplete() {
                 Log.e("!!!", homes.toString());
@@ -127,7 +115,9 @@ public class HomePageBottomSheetDialogFragment extends BottomSheetDialogFragment
                 adapter.selectButton(0);
             }
         });
-      
+        recyclerView.setAdapter(adapter);
+        adapter.selectButton(0);
+
         return view;
     }
 }

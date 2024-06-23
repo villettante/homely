@@ -97,7 +97,7 @@ public class AppliancePageFragment extends Fragment {
                     if (appliance.equals("Humidity")) {
                         sensorDataText.setText(String.valueOf(sensorData.getHumidity()) + " %");
                     }
-                    }
+                }
 
                 @Override
                 public void onCancelled(@NonNull DatabaseError error) {}

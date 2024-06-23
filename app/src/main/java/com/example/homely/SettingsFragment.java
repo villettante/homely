@@ -5,13 +5,22 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.ContextThemeWrapper;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.ListAdapter;
+import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
 import com.bumptech.glide.Glide;
@@ -21,6 +30,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignInClient;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.tasks.Task;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.imageview.ShapeableImageView;
 import com.google.firebase.auth.AuthCredential;
 import com.google.firebase.auth.FirebaseAuth;
@@ -33,7 +43,10 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 import static android.content.Context.MODE_PRIVATE;
 
@@ -44,11 +57,16 @@ public class SettingsFragment extends Fragment {
     FirebaseAuth firebaseAuth;
     DatabaseReference databaseReference;
     ShapeableImageView accountPhoto;
+    ListView listView;
     private GoogleSignInClient mGoogleSignInClient;
     private static final int RC_SIGN_IN = 9001;
     private boolean signInFromSettings = false;
     private User user;
+    private TextView homeNameTitle;
+    private Button addNewAccountButton;
+    private LinearLayout userContainer;
     private FirebaseAuth.AuthStateListener authStateListener;
+    private List<String> currentHomeUsersPhotoUrl = new ArrayList<>();
 
     public static SettingsFragment newInstance(User user) {
         SettingsFragment fragment = new SettingsFragment();
@@ -59,6 +77,65 @@ public class SettingsFragment extends Fragment {
     }
     public void setSignInFromSettings(boolean signInFromSettings) {
         this.signInFromSettings = signInFromSettings;
+    }
+
+    private void getCurrentHomeName(User user) {
+        for (Home home : user.getHomes()) {
+            if (home.isCurrent()) {
+                homeNameTitle.setText(home.getName());
+                break;
+            }
+        }
+    }
+
+    private void getCurrentHomeUsersPhotoUrl(User user) {
+        for (Home home : user.getHomes()) {
+            if (home.isCurrent()) {
+                DatabaseReference homeRef = databaseReference.child("homes").child(home.getId()).child("users");
+                homeRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                        HashMap<String, String> currentHomeUsersStatus = (HashMap) dataSnapshot.getValue();
+                        DatabaseReference usersRef = databaseReference.child("users");
+                        for (Map.Entry<String, String> uniqueId : currentHomeUsersStatus.entrySet()) {
+                            usersRef.child(uniqueId.getKey()).child("photoUrl").addListenerForSingleValueEvent(new ValueEventListener() {
+                                @Override
+                                public void onDataChange(@NonNull DataSnapshot snapshot) {
+                                    loadUser(snapshot.getValue().toString());
+                                }
+                                @Override
+                                public void onCancelled(@NonNull DatabaseError error) {
+                                    Log.e("SettingsFragment", "Error fetching data for user " + uniqueId + ": " + error.getMessage());
+                                }
+                            });
+                        }
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {
+                        Log.e("SettingsFragment", "fetchHomesForUser onCancelled: " + error.getMessage());
+                    }
+                });
+                break;
+            }
+        }
+    }
+
+    private void loadUser(String imageUrl) {
+        ShapeableImageView userImage = new ShapeableImageView(new ContextThemeWrapper(parentHolder.getContext(), R.style.roundedImageViewRounded));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                80, 80);
+        params.setMargins(8, 0, 8, 0);
+        userImage.setLayoutParams(params);
+        userImage.setScaleType(ImageView.ScaleType.CENTER_CROP);
+
+        Glide.with(this)
+                .load(imageUrl)
+                .placeholder(R.drawable.ic_launcher_background)
+                .error(R.drawable.ic_launcher_foreground)
+                .into(userImage);
+
+        userContainer.addView(userImage);
     }
 
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -85,8 +162,14 @@ public class SettingsFragment extends Fragment {
 
         mGoogleSignInClient = GoogleSignIn.getClient(referenceActivity, gso);
 
-        accountPhoto = parentHolder.findViewById(R.id.account_photo_settings_page);
+        homeNameTitle = parentHolder.findViewById(R.id.settings_home_name);
+        getCurrentHomeName(user);
 
+        userContainer = parentHolder.findViewById(R.id.user_container);
+
+        getCurrentHomeUsersPhotoUrl(user);
+
+        accountPhoto = parentHolder.findViewById(R.id.account_photo_settings_page);
         if (user.getPhotoUrl() != null) {
             Glide.with(this).load(user.getPhotoUrl()).into(accountPhoto);
         } else {
@@ -94,6 +177,19 @@ public class SettingsFragment extends Fragment {
         }
 
         accountPhoto.setOnClickListener(v -> signOutAndSignIn());
+
+        listView = parentHolder.findViewById(R.id.settings_list_view);
+
+        List<SettingsFragmentListItem> items = new ArrayList<>();
+        items.add(new SettingsFragmentListItem("Room", R.drawable.meeting_room_list_view));
+        items.add(new SettingsFragmentListItem("Device", R.drawable.add_circle_list_view));
+        items.add(new SettingsFragmentListItem("Home member", R.drawable.person_add_list_view));
+        items.add(new SettingsFragmentListItem("Home", R.drawable.home_list_view));
+
+        ListAdapter adapter = new SettingsFragmentListAdapter(requireContext(), items);
+        listView.setAdapter(adapter);
+
+        addNewAccountButton = parentHolder.findViewById(R.id.add_button);
 
         return parentHolder;
     }
@@ -154,7 +250,6 @@ public class SettingsFragment extends Fragment {
             }
         }
     }
-
     private void firebaseAuthWithGoogle(GoogleSignInAccount acct) {
         AuthCredential credential = GoogleAuthProvider.getCredential(acct.getIdToken(), null);
         firebaseAuth.signInWithCredential(credential)
@@ -260,7 +355,7 @@ public class SettingsFragment extends Fragment {
     private void updateUI(User user) {
         if (user != null) {
             if (!user.getPhotoUrl().isEmpty()) {
-                Glide.with(this).load(user.getPhotoUrl()).into(accountPhoto);
+                Glide.with(referenceActivity).load(user.getPhotoUrl()).into(accountPhoto);
             } else {
                 accountPhoto.setImageResource(R.drawable.ic_launcher_background);
             }

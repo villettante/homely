@@ -2,10 +2,8 @@ package com.example.homely;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
-import android.net.Uri;
 import android.os.Bundle;
 import android.text.SpannableString;
 import android.text.Spanned;
@@ -28,6 +26,8 @@ import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
@@ -53,9 +53,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import static android.content.Context.MODE_PRIVATE;
-
-public class HomePageFragment extends Fragment implements HomePageBottomSheetDialogFragment.OnItemSelectedListener {
+public class HomePageFragment extends Fragment implements HomePageBottomSheetDialogFragment.OnItemSelectedListener, DeviceCategoryItemAdapter.OnItemClickListener {
     public HomePageFragment() {}
 
     Activity referenceActivity;
@@ -69,12 +67,14 @@ public class HomePageFragment extends Fragment implements HomePageBottomSheetDia
 
     SensorData sensorData;
     FirebaseAuth firebaseAuth;
+    RecyclerView recyclerView;
     private static final int RC_SIGN_IN = 9001;
     private GoogleSignInClient mGoogleSignInClient;
     private User user;
     private FirebaseAuth.AuthStateListener authStateListener;
     private final LinkedHashMap<String, ArrayList<String>> roomAppliances = new LinkedHashMap<>();
     DatabaseReference databaseReference;
+    List<DeviceCategoryItem> deviceCategoryItems;
 
     public static HomePageFragment newInstance(User user) {
         HomePageFragment fragment = new HomePageFragment();
@@ -84,13 +84,22 @@ public class HomePageFragment extends Fragment implements HomePageBottomSheetDia
         return fragment;
     }
 
-    private void fetchCurrentHomeName(User user) {
+    private void getCurrentHomeName(User user) {
         for (Home home : user.getHomes()) {
             if (home.isCurrent()) {
                 title.setText(home.getName());
                 break;
             }
         }
+    }
+
+    private String getCurrentHomeUid(User user) {
+        for (Home home : user.getHomes()) {
+            if (home.isCurrent()) {
+                return home.getId();
+            }
+        }
+        return null;
     }
 
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -100,7 +109,6 @@ public class HomePageFragment extends Fragment implements HomePageBottomSheetDia
         user = (User) getArguments().getSerializable("user");
         Log.e("HomePageFragment", "User received: " + user.getEmail());
         user.getHomes().forEach(home -> Log.e("HomePageFragment/Homes", home.getName()));
-
 
         firebaseAuth = FirebaseAuth.getInstance();
         databaseReference = FirebaseDatabase.getInstance().getReference();
@@ -115,7 +123,7 @@ public class HomePageFragment extends Fragment implements HomePageBottomSheetDia
             Log.e("HomePageFragment", "currentUser is null in onCreateView");
         }
 
-        fetchCurrentHomeName(user);
+        getCurrentHomeName(user);
 
         authStateListener = firebaseAuth1 -> {
             FirebaseUser firebaseUser = firebaseAuth1.getCurrentUser();
@@ -137,6 +145,11 @@ public class HomePageFragment extends Fragment implements HomePageBottomSheetDia
         });
 
         accountPhoto.setOnClickListener(v -> signOutAndSignIn());
+
+        recyclerView = parentHolder.findViewById(R.id.devices_categories_home_page);
+        recyclerView.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
+
+        fetchDeviceData(getCurrentHomeUid(user));
 
         ArrayList<String> livingRoomAppliances = new ArrayList<>();
         livingRoomAppliances.add("Bulb");
@@ -299,6 +312,78 @@ public class HomePageFragment extends Fragment implements HomePageBottomSheetDia
         return parentHolder;
     }
 
+    private void fetchDeviceData(String homeId) {
+        DatabaseReference roomsRef = FirebaseDatabase.getInstance().getReference("homes").child(homeId).child("rooms");
+
+        roomsRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                final int[] lightCount = {0};
+                final int[] humiditySensorCount = {0};
+                final int[] temperatureSensorCount = {0};
+
+                for (DataSnapshot roomSnapshot : snapshot.getChildren()) {
+                    for (DataSnapshot deviceSnapshot : roomSnapshot.child("devices").getChildren()) {
+                        String deviceId = deviceSnapshot.getKey();
+                        DatabaseReference deviceInfoRef = FirebaseDatabase.getInstance().getReference("devices").child(deviceId);
+
+                        deviceInfoRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                            @Override
+                            public void onDataChange(@NonNull DataSnapshot deviceInfoSnapshot) {
+                                String deviceType = deviceInfoSnapshot.child("type").getValue(String.class);
+
+                                if (deviceType != null) {
+                                    switch (deviceType) {
+                                        case "light":
+                                            lightCount[0]++;
+                                            break;
+                                        case "sensor":
+                                            String deviceName = deviceInfoSnapshot.child("name").getValue(String.class);
+                                            if (deviceName.contains("Humidity")) {
+                                                humiditySensorCount[0]++;
+                                            } else if (deviceName.contains("Temperature")) {
+                                                temperatureSensorCount[0]++;
+                                            }
+                                            break;
+                                    }
+                                }
+
+                                getExistingDevicesCategories(lightCount[0], humiditySensorCount[0], temperatureSensorCount[0]);
+                            }
+
+                            @Override
+                            public void onCancelled(@NonNull DatabaseError error) {
+                                // Handle error
+                            }
+                        });
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                // Handle error
+            }
+        });
+    }
+
+    private void getExistingDevicesCategories(int lightCount, int humiditySensorCount, int temperatureSensorCount) {
+        List<DeviceCategoryItem> deviceCategoryItems = new ArrayList<>();
+
+        if (lightCount > 0) {
+            deviceCategoryItems.add(new DeviceCategoryItem("Lighting", lightCount + " lights", getResources().getColor(R.color.container_selected_highlight), R.drawable.light_group));
+        }
+        if (temperatureSensorCount > 0) {
+            deviceCategoryItems.add(new DeviceCategoryItem("Temperature", humiditySensorCount + " sensors", getResources().getColor(R.color.container_secondary), R.drawable.device_thermostat));
+        }
+        if (humiditySensorCount > 0) {
+            deviceCategoryItems.add(new DeviceCategoryItem("Humidity", humiditySensorCount + " sensors", getResources().getColor(R.color.container), R.drawable.humidity_indoor));
+        }
+
+        DeviceCategoryItemAdapter adapter = new DeviceCategoryItemAdapter(deviceCategoryItems, this);
+        recyclerView.setAdapter(adapter);
+    }
+
     @Override
     public void onStop() {
         super.onStop();
@@ -318,6 +403,24 @@ public class HomePageFragment extends Fragment implements HomePageBottomSheetDia
         title.setText(text);
     }
 
+    @Override
+    public void onItemClick(DeviceCategoryItem item) {
+        Fragment fragment = null;
+
+        switch (item.getTitle()) {
+            case "Lighting":
+                fragment = LightingFragment.newInstance(user);
+                break;
+        }
+
+        if (fragment != null) {
+            getParentFragmentManager().beginTransaction()
+                    .replace(R.id.flFragment, fragment)
+                    .addToBackStack(null)
+                    .commit();
+        }
+    }
+
     private void checkIfUserIsLoggedIn() {
         FirebaseUser firebaseUser = firebaseAuth.getCurrentUser();
         GoogleSignInAccount googleSignInAccount = GoogleSignIn.getLastSignedInAccount(referenceActivity);
@@ -332,7 +435,7 @@ public class HomePageFragment extends Fragment implements HomePageBottomSheetDia
     private void updateUI(User user) {
         if (user != null) {
             if (!user.getPhotoUrl().isEmpty()) {
-                Glide.with(this).load(user.getPhotoUrl()).into(accountPhoto);
+                Glide.with(referenceActivity).load(user.getPhotoUrl()).into(accountPhoto);
             } else {
                 accountPhoto.setImageResource(R.drawable.ic_launcher_background);
             }
@@ -417,7 +520,7 @@ public class HomePageFragment extends Fragment implements HomePageBottomSheetDia
                 List<Home> homes = new ArrayList<>();
                 for (DataSnapshot homeSnapshot : dataSnapshot.getChildren()) {
                     String homeId = homeSnapshot.getKey();
-                    boolean isCurrentHome = homeSnapshot.getValue(Boolean.class);
+                    boolean isCurrentHome = Boolean.TRUE.equals(homeSnapshot.getValue(Boolean.class));
                     fetchHomeDetails(homeId, isCurrentHome, homes, user, uid);
                     updateUI(user);
                 }

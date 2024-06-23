@@ -4,43 +4,124 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/background"
     tools:context=".MainActivity">
 
-    <ScrollView
-        android:id="@+id/scroll_view_settings_page"
-        android:layout_marginTop="15dp"
-        android:layout_marginLeft="5dp"
-        android:layout_marginRight="5dp"
+    <LinearLayout
+        android:id="@+id/accounts_linear_layout"
         android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:layout_marginStart="15dp"
+        android:layout_marginEnd="15dp"
+        android:layout_marginTop="30dp"
+        android:scrollbars="none"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/linear_layout_settings">
+
+        <HorizontalScrollView
+            android:id="@+id/horizontalScrollView"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:id="@+id/user_container"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal" />
+        </HorizontalScrollView>
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/add_button"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:backgroundTint="@color/text_color_tertiary"
+            android:background="@drawable/add_icon"
+            />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/linear_layout_settings"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginStart="15dp"
+        android:layout_marginTop="30dp"
+        android:orientation="vertical"
+        android:textAlignment="textStart"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/settings_top_app_bar">
 
-        <LinearLayout
+        <TextView
+            android:id="@+id/settings_home_name"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textAlignment="textStart"
-            android:layout_marginStart="10dp"
-            android:orientation="vertical">
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="My Spring Street Home"
-                android:textColor="@color/text_color_header"
-                android:fontFamily="@font/productsans_medium"
-                android:layout_marginBottom="10dp"
-                android:textSize="25sp"/>
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Spring Street"
-                android:textColor="@color/text_color_primary"
-                android:fontFamily="@font/productsans_regular"
-                android:textSize="15sp"/>
-        </LinearLayout>
+            android:layout_marginBottom="10dp"
+            android:fontFamily="@font/productsans_medium"
+            android:text="My Spring Street Home"
+            android:textColor="@color/text_color_header"
+            android:textSize="25sp" />
 
-    </ScrollView>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/productsans_regular"
+            android:text="Spring Street"
+            android:textColor="@color/text_color_primary"
+            android:textSize="15sp" />
+    </LinearLayout>
+
+
+    <LinearLayout
+        android:id="@+id/linearLayout2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="15dp"
+        android:layout_marginEnd="15dp"
+        android:layout_marginTop="20dp"
+        android:layout_weight="200"
+        android:gravity="start"
+        android:orientation="horizontal"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="1.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/accounts_linear_layout">
+
+        <ImageView
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_gravity="center_vertical"
+            android:layout_marginStart="10dp"
+            android:layout_marginEnd="10dp"
+            android:src="@drawable/keyboard_arrow_down" />
+
+        <TextView
+            android:id="@+id/bottom_sheet_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/productsans_regular"
+            android:text="@string/add"
+            android:textAlignment="center"
+            android:textColor="@color/text_color_header"
+            android:textSize="21sp" />
+
+    </LinearLayout>
+
+    <ListView
+        android:id="@+id/settings_list_view"
+        android:layout_width="match_parent"
+        android:layout_height="450dp"
+        android:layout_marginStart="15dp"
+        android:layout_marginTop="20dp"
+        android:layout_marginEnd="15dp"
+        android:divider="@android:color/transparent"
+        android:dividerHeight="7dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/linearLayout2"
+        tools:listitem="@layout/fragment_settings_list_view_item" />
 
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/settings_top_app_bar"
@@ -57,12 +138,12 @@
             android:id="@+id/title_settings_page"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:maxWidth="200dp"
-            android:ellipsize="end"
-            android:singleLine="true"
             android:layout_gravity="start|center_vertical"
             android:layout_marginEnd="5dp"
+            android:ellipsize="end"
             android:fontFamily="@font/productsans_regular"
+            android:maxWidth="200dp"
+            android:singleLine="true"
             android:text="@string/settings"
             android:textColor="@android:color/black"
             android:textSize="20sp" />
@@ -78,16 +159,4 @@
             app:shapeAppearanceOverlay="@style/roundedImageViewRounded" />
 
     </androidx.appcompat.widget.Toolbar>
-
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="24dp"
-        android:layout_marginBottom="16dp"
-        android:width="50dp"
-        android:backgroundTint="@color/container_highlight"
-        android:src="@drawable/dropdown_arrow"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
-
 </androidx.constraintlayout.widget.ConstraintLayout>

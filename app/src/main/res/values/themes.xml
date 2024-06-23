@@ -77,5 +77,16 @@
         <item name="android:textColorHint">@color/text_color_secondary</item>
     </style>
 
+    <style name="Widget.App.Button.OutlinedButton.IconOnly" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:backgroundTint">@color/container_highlight</item>
+        <item name="iconPadding">0dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:paddingLeft">12dp</item>
+        <item name="android:paddingRight">12dp</item>
+        <item name="android:minWidth">48dp</item>
+        <item name="android:minHeight">48dp</item>
+    </style>
+
     <style name="Theme.Homely" parent="Base.Theme.Homely" />
 </resources>

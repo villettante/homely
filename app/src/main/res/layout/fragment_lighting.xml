@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <androidx.appcompat.widget.Toolbar
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        android:background="@color/background">
+
+        <ImageView
+            android:id="@+id/close_fragment_lighting"
+            android:layout_width="25dp"
+            android:layout_height="25dp"
+            android:src="@drawable/close"/>
+        
+    </androidx.appcompat.widget.Toolbar>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Lighting"
+        android:fontFamily="@font/productsans_regular"
+        android:textColor="@color/text_color_header"
+        android:layout_marginTop="15dp"
+        android:layout_marginStart="15dp"
+        android:textSize="29sp"/>
+
+    <com.google.android.material.button.MaterialButtonToggleGroup
+        android:id="@+id/toggle_group_all_lights"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:gravity="center">
+
+        <Button
+            android:id="@+id/button_all_lights_on"
+            android:layout_width="170dp"
+            android:layout_height="wrap_content"
+            android:text="On"
+            android:fontFamily="@font/productsans_regular"
+            style="@style/Widget.App.Button.OutlinedButton.IconOnly"
+            android:textColor="@color/text_color_header"/>
+        <Button
+            android:id="@+id/button_all_lights_off"
+            android:layout_width="170dp"
+            android:layout_height="wrap_content"
+            android:text="Off"
+            android:fontFamily="@font/productsans_regular"
+            style="@style/Widget.App.Button.OutlinedButton.IconOnly"
+            android:textColor="@color/text_color_header"/>
+
+    </com.google.android.material.button.MaterialButtonToggleGroup>
+
+    <!-- ScrollView to display lights in different rooms -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <LinearLayout
+            android:id="@+id/lights_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>
