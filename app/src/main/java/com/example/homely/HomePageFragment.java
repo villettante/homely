@@ -433,7 +433,6 @@ public class HomePageFragment extends Fragment implements HomePageBottomSheetDia
     }
 
     private void updateUI(User user) {
-
         if (user != null) {
             if (!user.getPhotoUrl().isEmpty()) {
                 Glide.with(referenceActivity).load(user.getPhotoUrl()).into(accountPhoto);

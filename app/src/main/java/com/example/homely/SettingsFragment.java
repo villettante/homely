@@ -60,6 +60,7 @@ public class SettingsFragment extends Fragment {
     ListView listView;
     private GoogleSignInClient mGoogleSignInClient;
     private static final int RC_SIGN_IN = 9001;
+    private boolean signInFromSettings = false;
     private User user;
     private TextView homeNameTitle;
     private Button addNewAccountButton;
@@ -73,6 +74,9 @@ public class SettingsFragment extends Fragment {
         args.putSerializable("user", user);
         fragment.setArguments(args);
         return fragment;
+    }
+    public void setSignInFromSettings(boolean signInFromSettings) {
+        this.signInFromSettings = signInFromSettings;
     }
 
     private void getCurrentHomeName(User user) {

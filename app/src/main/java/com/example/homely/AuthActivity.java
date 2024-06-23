@@ -205,14 +205,6 @@ public class AuthActivity extends AppCompatActivity {
 
     private void storeNewUserData(FirebaseUser firebaseUser, User user) {
         Log.d("AuthActivity", "storeNewUserData: Storing new user data");
-        databaseReference.child("publicProfiles").child(firebaseUser.getUid()).setValue(user.getPhotoUrl())
-                .addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
-                        Log.d("AuthActivity", "storeNewUserData: Public user data saved successfully");
-                    } else {
-                        Log.w("AuthActivity", "storeNewUserData: Failed to save public user data", task.getException());
-                    }
-                });
         databaseReference.child("users").child(firebaseUser.getUid()).setValue(user)
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {

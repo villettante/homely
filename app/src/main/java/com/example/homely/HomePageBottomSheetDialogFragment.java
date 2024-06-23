@@ -95,16 +95,29 @@ public class HomePageBottomSheetDialogFragment extends BottomSheetDialogFragment
 
         CarouselAdapter adapter = new CarouselAdapter(getContext(), homes, HomePageBottomSheetDialogFragment.this, new CarouselAdapter.OnItemClickListener() {
             @Override
-            public void onItemClick(String text) {
-                if (onItemSelectedListener != null) {
-                    onItemSelectedListener.onItemSelected(text);
-                    bottomSheetTitle.setText(text);
+            public void onFetchComplete() {
+                Log.e("!!!", homes.toString());
+                if (currentHome != null) {
+                    bottomSheetTitle.setText(currentHome.getName());
                 }
-                dismiss();
+
+                adapter = new CarouselAdapter(getContext(), homes, HomePageBottomSheetDialogFragment.this, new CarouselAdapter.OnItemClickListener() {
+                    @Override
+                    public void onItemClick(String text) {
+                        if (onItemSelectedListener != null) {
+                            onItemSelectedListener.onItemSelected(text);
+                            bottomSheetTitle.setText(text);
+                        }
+                        dismiss();
+                    }
+                });
+                recyclerView.setAdapter(adapter);
+                adapter.selectButton(0);
             }
         });
         recyclerView.setAdapter(adapter);
         adapter.selectButton(0);
+
         return view;
     }
 }
