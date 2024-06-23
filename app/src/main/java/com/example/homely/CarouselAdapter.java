@@ -12,13 +12,13 @@ import java.util.List;
 
 public class CarouselAdapter extends RecyclerView.Adapter<CarouselAdapter.ViewHolder> {
 
-    private final List<Home> items;
+    private final List<String> items;
     private final Context context;
     private int selectedPosition = RecyclerView.NO_POSITION;
     private final HomePageBottomSheetDialogFragment bottomSheetDialogFragment;
     private OnItemClickListener onItemClickListener;
 
-    public CarouselAdapter(Context context, List<Home> items, HomePageBottomSheetDialogFragment bottomSheetDialogFragment, OnItemClickListener onItemClickListener) {
+    public CarouselAdapter(Context context, List<String> items, HomePageBottomSheetDialogFragment bottomSheetDialogFragment, OnItemClickListener onItemClickListener) {
         this.context = context;
         this.items = items;
         this.bottomSheetDialogFragment = bottomSheetDialogFragment;
@@ -74,7 +74,7 @@ public class CarouselAdapter extends RecyclerView.Adapter<CarouselAdapter.ViewHo
         }
     }
 
-    public Home getSelectedItem() {
+    public String getSelectedItem() {
         if (selectedPosition != RecyclerView.NO_POSITION) {
             return items.get(selectedPosition);
         }
